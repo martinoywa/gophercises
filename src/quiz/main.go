@@ -20,7 +20,6 @@ func exit(msg string) {
 }
 
 func getScore(csvLines [][]string, timer time.Timer) {
-	var userAnswer string
 	var scoreCount int
 	problemCount := len(csvLines)
 
@@ -29,15 +28,20 @@ func getScore(csvLines [][]string, timer time.Timer) {
 			Question: line[0],
 			Answer:   strings.TrimSpace(line[1]), // helps remove spaces if exists e.g 5+5, 10
 		}
+		fmt.Printf("Problem #%d: %s = ", i+1, qa.Question)
 
+		answerChan := make(chan string)
+		go func() {
+			var userAnswer string
+			fmt.Scan(&userAnswer)
+			answerChan <- userAnswer
+		}()
+		
 		select {
 		case <-timer.C:
-			fmt.Printf("You scored %d / %d\n", scoreCount, problemCount)
+			fmt.Printf("\nYou scored %d / %d\n", scoreCount, problemCount)
 			return
-		default:
-			fmt.Printf("Problem #%d: %s = ", i+1, qa.Question)
-			fmt.Scan(&userAnswer)
-
+		case userAnswer := <-answerChan:
 			if userAnswer == qa.Answer {
 				scoreCount += 1
 			}
