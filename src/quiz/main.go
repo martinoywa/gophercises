@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 type questionAnswer struct {
@@ -18,9 +19,10 @@ func exit(msg string) {
 	os.Exit(1)
 }
 
-func getScore(csvLines [][]string) (int, int) {
+func getScore(csvLines [][]string, timer time.Timer) {
 	var userAnswer string
 	var scoreCount int
+	problemCount := len(csvLines)
 
 	for i, line := range csvLines {
 		qa := questionAnswer{
@@ -28,19 +30,24 @@ func getScore(csvLines [][]string) (int, int) {
 			Answer:   strings.TrimSpace(line[1]), // helps remove spaces if exists e.g 5+5, 10
 		}
 
-		fmt.Printf("Problem #%d: %s = ", i+1, qa.Question)
-		fmt.Scan(&userAnswer)
+		select {
+		case <-timer.C:
+			fmt.Printf("You scored %d / %d\n", scoreCount, problemCount)
+			return
+		default:
+			fmt.Printf("Problem #%d: %s = ", i+1, qa.Question)
+			fmt.Scan(&userAnswer)
 
-		if userAnswer == qa.Answer {
-			scoreCount += 1
+			if userAnswer == qa.Answer {
+				scoreCount += 1
+			}
 		}
 	}
-
-	return scoreCount, len(csvLines)
 }
 
 func main() {
 	csvFileName := flag.String("csv", "problems.csv", "a csv file with question answer format")
+	timeLimit := flag.Int("limit", 30, "the time limit for the quiz in seconds")
 	flag.Parse()
 
 	csvFile, err := os.Open(*csvFileName)
@@ -56,6 +63,8 @@ func main() {
 		exit(fmt.Sprintln(err))
 	}
 
-	scoreCount, problemCount := getScore(csvLines)
-	fmt.Printf("You scored %d / %d\n", scoreCount, problemCount)
+	timer := time.NewTimer(time.Duration(*timeLimit) * time.Second)
+
+	getScore(csvLines, *timer)
+	
 }
